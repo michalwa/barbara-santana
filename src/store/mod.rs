@@ -42,8 +42,8 @@ impl<T: StoreItem> Store<T> {
         }
     }
 
-    /// Returns an immutable reference to guild settings for the guild with the
-    /// specified id. Fetches the settings from the database, if not fetched already.
+    /// Returns an immutable reference to the item identified by the given key.
+    /// Fetches the item from the database, if not present in the local cache.
     pub async fn get(&mut self, id: T::Key) -> Result<&T> {
         if !self.cache.contains_key(&id) {
 
@@ -76,8 +76,8 @@ impl<T: StoreItem> Store<T> {
         Ok(&self.cache[&id])
     }
 
-    /// Calls the given callback with a mutable reference to guild settings
-    /// for the guild with the specified id and persists the settings to the database
+    /// Calls the given callback with a mutable reference to the item identified
+    /// by the given key and persists it to the database afterwards
     pub async fn with_mut<F>(&mut self, id: T::Key, f: F) -> Result<()>
     where
         F: FnOnce(&mut T) -> ()
