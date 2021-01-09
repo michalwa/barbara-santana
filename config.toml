@@ -1,0 +1,7 @@
+[bot]
+token = "BOT_TOKEN_HERE"
+default_prefix = "%"
+
+[database]
+uri = "MONGODB_URI_HERE"
+name = "bot"
