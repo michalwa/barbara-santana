@@ -34,7 +34,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let framework = StandardFramework::new()
         .configure(|c| c.dynamic_prefix(dynamic_prefix_handler))
         .help(&HELP)
-        .group(&OWNER_GROUP);
+        .group(&OWNER_GROUP)
+        .group(&VOICE_GROUP);
 
     let mut client = Client::builder(&config.bot.token)
         .event_handler(Handler)
