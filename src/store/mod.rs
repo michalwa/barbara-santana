@@ -13,17 +13,17 @@ use serenity::prelude::*;
 use crate::db::DbClient;
 
 /// A type that can be stored in a Store
-pub trait StoreItem: Default + Serialize + for<'de> Deserialize<'de> + Send + Sync {
+pub trait StoreItem: Default + Send + Sync + Serialize + for<'de> Deserialize<'de> {
     /// The key type to use to identify items of this type
-    type Key: DocId;
+    type Key: StoreItemKey;
 }
 
 /// A type that can be used as a database document id
-pub trait DocId: Copy + Eq + Hash + Send + Sync {
+pub trait StoreItemKey: Copy + Eq + Hash + Send + Sync {
     /// The effective id type stored in the database
-    type Id: Serialize + Into<Bson>;
+    type DocumentId: Serialize + Into<Bson>;
     /// Returns the effective id to store in the database
-    fn doc_id(&self) -> Self::Id;
+    fn doc_id(&self) -> Self::DocumentId;
 }
 
 /// Manages permanent bot configuration like guild-scoped settings, etc.

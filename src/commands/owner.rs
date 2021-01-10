@@ -13,9 +13,8 @@ struct Owner;
 #[check]
 #[name = "Owner"]
 async fn check_owner(ctx: &Context, msg: &Message) -> CheckResult {
-    (msg.guild(ctx).await
-        .map_or(false, |g| g.owner_id == msg.author.id))
-        .into()
+    msg.guild(ctx).await.map_or(false,
+        |g| g.owner_id == msg.author.id).into()
 }
 
 #[command]

@@ -10,7 +10,7 @@ pub struct GuildSettings {
 impl Default for GuildSettings {
     fn default() -> Self {
         Self {
-            prefix: "%".to_owned(),
+            prefix: "%".into(),
         }
     }
 }
@@ -19,7 +19,7 @@ impl StoreItem for GuildSettings {
     type Key = GuildId;
 }
 
-impl DocId for GuildId {
-    type Id = u64;
-    fn doc_id(&self) -> Self::Id { self.0 }
+impl StoreItemKey for GuildId {
+    type DocumentId = u64;
+    fn doc_id(&self) -> Self::DocumentId { self.0 }
 }

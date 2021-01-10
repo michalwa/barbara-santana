@@ -3,6 +3,8 @@ use serde::Deserialize;
 use std::fs;
 use std::error::Error;
 
+use crate::db;
+
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
     pub bot: BotConfig,
@@ -30,4 +32,10 @@ pub struct BotConfig {
 pub struct DbConfig {
     pub uri: String,
     pub name: String,
+}
+
+impl DbConfig {
+    pub async fn into_client(&self) -> db::Result<db::DbClient> {
+        db::DbClient::new(&self.uri, &self.name).await
+    }
 }

@@ -1,5 +1,5 @@
 mod help;
-pub use help::HELP;
-
 mod owner;
+
+pub use help::HELP;
 pub use owner::OWNER_GROUP;

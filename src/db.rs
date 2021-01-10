@@ -1,7 +1,9 @@
-use mongodb::{error::Result, Client, Database};
+pub use mongodb::error::Result;
+use mongodb::{Client, Database};
 use serenity::prelude::*;
 
 /// Manages the database connection and access
+#[derive(Clone)]
 pub struct DbClient {
     db_client: Client,
     db_name: String,
@@ -16,6 +18,7 @@ impl DbClient {
         })
     }
 
+    /// Returns a handle to the main database
     pub fn database(&self) -> Database {
         self.db_client.database(&self.db_name)
     }

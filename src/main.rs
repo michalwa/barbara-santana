@@ -1,18 +1,15 @@
-use std::{
-    error::Error,
-    future::Future,
-    pin::Pin,
-};
+use std::{error::Error, future::Future, pin::Pin};
+
 use serenity::{
-    prelude::*,
     async_trait,
+    client::{Client, Context, EventHandler},
     model::channel::Message,
     framework::standard::StandardFramework,
     model::gateway::Ready,
 };
+
 use rsdis::{
     config::AppConfig,
-    db::DbClient,
     store::{Store, guild::GuildSettings},
     commands::*,
 };
@@ -30,9 +27,8 @@ impl EventHandler for Handler {
 async fn main() -> Result<(), Box<dyn Error>> {
     let config = AppConfig::load().expect("Could not load config");
 
-    let store: Store<GuildSettings> = Store::new(
-        DbClient::new(&config.database.uri, &config.database.name).await?,
-        "guilds");
+    let db = config.database.into_client().await?;
+    let store: Store<GuildSettings> = Store::new(db, "guilds");
 
     let framework = StandardFramework::new()
         .configure(|c| c.dynamic_prefix(dynamic_prefix_handler))
@@ -60,14 +56,13 @@ fn dynamic_prefix_handler<'f>(ctx: &'f Context, msg: &'f Message)
     -> Pin<Box<dyn Future<Output = Option<String>> + Send + 'f>>
 {
     Box::pin(async move {
+        let mut data = ctx.data.write().await;
+
         if let Some(id) = msg.guild_id {
-            if let Some(store) = ctx.data.write().await.get_mut::<Store<GuildSettings>>() {
-                return store.get(id).await
-                    .map_or(None, |g| Some(g.prefix.clone()));
-            }
+            let store = data.get_mut::<Store<GuildSettings>>().unwrap();
+            store.get(id).await.map_or(None, |g| Some(g.prefix.clone()))
+        } else {
+            Some(data.get::<AppConfig>().unwrap().bot.default_prefix.clone())
         }
-        ctx.data.read().await
-            .get::<AppConfig>()
-            .map(|c| c.bot.default_prefix.clone())
     })
 }
