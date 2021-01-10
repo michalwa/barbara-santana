@@ -1,4 +1,4 @@
-use crate::store::{Store, guild::GuildSettings};
+use crate::{db::DbClient, store::{Store, guild::GuildSettings}};
 use serenity::{
     client::Context,
     model::channel::Message,
@@ -32,8 +32,9 @@ async fn prefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         let new_prefix: String = args.parse()?;
 
         let mut data = ctx.data.write().await;
+        let db = data.get::<DbClient>().unwrap().clone();
         let store = data.get_mut::<Store<GuildSettings>>().unwrap();
-        store.with_mut(id, |g| g.prefix = new_prefix.clone())?;
+        store.with_mut(db, id, |g| g.prefix = new_prefix.clone())?;
 
         msg.reply(ctx, format!("Server prefix changed to {}", new_prefix)).await?;
     }

@@ -1,9 +1,10 @@
 pub use mongodb::error::Result;
+
+use std::sync::Arc;
 use mongodb::sync::{Client, Database};
 use serenity::prelude::*;
 
 /// Manages the database connection and access
-#[derive(Clone)]
 pub struct DbClient {
     db_client: Client,
     db_name: String,
@@ -25,5 +26,5 @@ impl DbClient {
 }
 
 impl TypeMapKey for DbClient {
-    type Value = Self;
+    type Value = Arc<Self>;
 }

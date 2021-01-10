@@ -11,6 +11,7 @@ use serenity::{
 
 use rsdis::{
     config::AppConfig,
+    db::DbClient,
     store::{Store, guild::GuildSettings},
     commands::*,
 };
@@ -29,7 +30,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config = AppConfig::load().expect("Could not load config");
 
     let db = config.database.into_client().await?;
-    let store: Store<GuildSettings> = Store::new(db, "guilds");
 
     let framework = StandardFramework::new()
         .configure(|c| c.dynamic_prefix(dynamic_prefix_handler))
@@ -40,8 +40,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .event_handler(Handler)
         .framework(framework)
         .register_songbird()
+        .type_map_insert::<DbClient>(db.into())
         .type_map_insert::<AppConfig>(config)
-        .type_map_insert::<Store<GuildSettings>>(store)
+        .type_map_insert::<Store<GuildSettings>>(Store::new("guilds"))
         .await?;
 
     if let Err(e) = client.start().await {
@@ -60,8 +61,9 @@ fn dynamic_prefix_handler<'f>(ctx: &'f Context, msg: &'f Message)
         let mut data = ctx.data.write().await;
 
         if let Some(id) = msg.guild_id {
+            let db = data.get::<DbClient>().unwrap().clone();
             let store = data.get_mut::<Store<GuildSettings>>().unwrap();
-            store.get(id).map_or(None, |g| Some(g.prefix.clone()))
+            store.get(db, id).map_or(None, |g| Some(g.prefix.clone()))
         } else {
             Some(data.get::<AppConfig>().unwrap().bot.default_prefix.clone())
         }

@@ -1,6 +1,6 @@
 pub mod guild;
 
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, ops::Deref};
 use bson::Bson;
 use serde::{Serialize, Deserialize};
 use serenity::prelude::*;
@@ -29,15 +29,13 @@ pub trait StoreItemKey: Copy + Eq + Hash + Send + Sync {
 
 /// Manages permanent bot configuration like guild-scoped settings, etc.
 pub struct Store<T: StoreItem> {
-    db_client: DbClient,
     collection_name: String,
     cache: HashMap<T::Key, T>,
 }
 
 impl<T: StoreItem> Store<T> {
-    pub fn new(db_client: DbClient, collection_name: impl Into<String>) -> Self {
+    pub fn new(collection_name: impl Into<String>) -> Self {
         Self {
-            db_client,
             collection_name: collection_name.into(),
             cache: HashMap::new(),
         }
@@ -45,11 +43,14 @@ impl<T: StoreItem> Store<T> {
 
     /// Returns an immutable reference to the item identified by the given key.
     /// Fetches the item from the database, if not present in the local cache.
-    pub fn get(&mut self, id: T::Key) -> Result<&T> {
+    pub fn get<D>(&mut self, db: D, id: T::Key) -> Result<&T>
+    where
+        D: Deref<Target = DbClient>,
+    {
         if !self.cache.contains_key(&id) {
 
             // Fetch settings from database
-            let opt = self.db_client.database()
+            let opt = db.database()
                 .collection(&self.collection_name)
                 .find_one(doc! { "_id": id.doc_id().into() }, None)?;
 
@@ -64,7 +65,7 @@ impl<T: StoreItem> Store<T> {
                 // Insert default into both database and local cache
                 let item = T::default();
 
-                self.db_client.database()
+                db.database()
                     .collection(&self.collection_name)
                     .insert_one(to_document(id.doc_id(), &item), None)?;
 
@@ -77,9 +78,10 @@ impl<T: StoreItem> Store<T> {
 
     /// Calls the given callback with a mutable reference to the item identified
     /// by the given key and persists it to the database afterwards
-    pub fn with_mut<F>(&mut self, id: T::Key, f: F) -> Result<()>
+    pub fn with_mut<D, F>(&mut self, db: D, id: T::Key, f: F) -> Result<()>
     where
-        F: FnOnce(&mut T) -> ()
+        D: Deref<Target = DbClient>,
+        F: FnOnce(&mut T) -> (),
     {
         // Insert if not exists
         if !self.cache.contains_key(&id) {
@@ -91,7 +93,7 @@ impl<T: StoreItem> Store<T> {
         f(item);
 
         // Persist to database
-        self.db_client.database()
+        db.database()
             .collection(&self.collection_name)
             .find_one_and_replace(
                 doc! { "_id": id.doc_id().into() },
