@@ -3,12 +3,13 @@ pub mod guild;
 use std::{collections::HashMap, hash::Hash};
 use bson::Bson;
 use serde::{Serialize, Deserialize};
+use serenity::prelude::*;
+
 use mongodb::{
     bson::{self, doc},
     error::Result,
     options::FindOneAndReplaceOptions,
 };
-use serenity::prelude::*;
 
 use crate::db::DbClient;
 
@@ -44,14 +45,13 @@ impl<T: StoreItem> Store<T> {
 
     /// Returns an immutable reference to the item identified by the given key.
     /// Fetches the item from the database, if not present in the local cache.
-    pub async fn get(&mut self, id: T::Key) -> Result<&T> {
+    pub fn get(&mut self, id: T::Key) -> Result<&T> {
         if !self.cache.contains_key(&id) {
 
             // Fetch settings from database
             let opt = self.db_client.database()
                 .collection(&self.collection_name)
-                .find_one(doc! { "_id": id.doc_id().into() }, None)
-                .await?;
+                .find_one(doc! { "_id": id.doc_id().into() }, None)?;
 
             if let Some(doc) = opt {
 
@@ -66,8 +66,7 @@ impl<T: StoreItem> Store<T> {
 
                 self.db_client.database()
                     .collection(&self.collection_name)
-                    .insert_one(to_document(id.doc_id(), &item), None)
-                    .await?;
+                    .insert_one(to_document(id.doc_id(), &item), None)?;
 
                 self.cache.insert(id, item);
             }
@@ -78,7 +77,7 @@ impl<T: StoreItem> Store<T> {
 
     /// Calls the given callback with a mutable reference to the item identified
     /// by the given key and persists it to the database afterwards
-    pub async fn with_mut<F>(&mut self, id: T::Key, f: F) -> Result<()>
+    pub fn with_mut<F>(&mut self, id: T::Key, f: F) -> Result<()>
     where
         F: FnOnce(&mut T) -> ()
     {
@@ -99,8 +98,7 @@ impl<T: StoreItem> Store<T> {
                 to_document(id.doc_id(), item),
                 FindOneAndReplaceOptions::builder()
                     .upsert(true)
-                    .build())
-            .await?;
+                    .build())?;
 
         Ok(())
     }

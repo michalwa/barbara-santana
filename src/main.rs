@@ -1,4 +1,5 @@
 use std::{error::Error, future::Future, pin::Pin};
+use songbird::SerenityInit;
 
 use serenity::{
     async_trait,
@@ -36,12 +37,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .group(&OWNER_GROUP);
 
     let mut client = Client::builder(&config.bot.token)
-        .type_map_insert::<AppConfig>(config)
-        .type_map_insert::<Store<GuildSettings>>(store)
         .event_handler(Handler)
         .framework(framework)
-        .await
-        .expect("Could not create client");
+        .register_songbird()
+        .type_map_insert::<AppConfig>(config)
+        .type_map_insert::<Store<GuildSettings>>(store)
+        .await?;
 
     if let Err(e) = client.start().await {
         eprintln!("Client exited with error: {:?}", e);
@@ -60,7 +61,7 @@ fn dynamic_prefix_handler<'f>(ctx: &'f Context, msg: &'f Message)
 
         if let Some(id) = msg.guild_id {
             let store = data.get_mut::<Store<GuildSettings>>().unwrap();
-            store.get(id).await.map_or(None, |g| Some(g.prefix.clone()))
+            store.get(id).map_or(None, |g| Some(g.prefix.clone()))
         } else {
             Some(data.get::<AppConfig>().unwrap().bot.default_prefix.clone())
         }
